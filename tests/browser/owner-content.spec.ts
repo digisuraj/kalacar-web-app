@@ -118,7 +118,7 @@ test.describe("product page follows the dashboard", () => {
     await expect(page.getByText("₹200 off above ₹1,500")).toBeVisible();
     await expect(page.getByText("Founder message")).toBeVisible();
     await expect(page.getByText("Is it fragile?")).toBeVisible();
-    await expect(page.getByRole("link", { name: /WhatsApp/ })).toBeVisible();
+    await expect(page.locator("main > :not(footer)").getByRole("link", { name: /WhatsApp/ })).toBeVisible();
     await expectFits(page);
     expect(errors).toEqual([]);
   });

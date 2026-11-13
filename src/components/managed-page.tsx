@@ -6,7 +6,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { ContactForm } from "@/components/contact-form";
 import { ArrowLeft } from "@/components/icons";
-import { PolicyLinks } from "@/components/policy-links";
+import { SiteFooter } from "@/components/site-footer";
 import { cleanPageHtml, defaultPage, getPage } from "@/lib/pages";
 
 /** If the database can't be reached, the page's starting text is shown, so it's never blank. */
@@ -38,6 +38,6 @@ export function ManagedPage({ slug }: { slug: string }) {
   return <main className="policy-page">
     <header className="detail-header"><ShopLogo /><Link className="back-to-shop" href="/"><ArrowLeft /> Back to the shop</Link></header>
     <Suspense fallback={<article className="policy-content"><p>Loading…</p></article>}><Body slug={slug} /></Suspense>
-    <footer className="policy-footer"><PolicyLinks /></footer>
+    <SiteFooter />
   </main>;
 }

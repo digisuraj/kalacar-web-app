@@ -13,6 +13,8 @@ import type { RazorpayPaymentSuccess } from "@/types/razorpay";
 import { AddressFields, addressSummary, emptyAddress, toDraft } from "@/components/address-fields";
 import type { AddressDraft, SavedAddress } from "@/components/address-fields";
 import { OrderConfirmation } from "@/components/order-confirmation";
+import { updatesGoTo } from "@/lib/store-info";
+import { trackShopEvent } from "@/components/tracking-tags";
 import { DeliveryLine } from "@/components/product-facts";
 import { BagIcon, External } from "@/components/icons";
 
@@ -249,6 +251,7 @@ export default function BagFlow() {
 
   async function startCheckout(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setError(""); setSuccess(""); setNotice("");
+    trackShopEvent("begin_checkout", resolved.map(({ product, colour, line }) => ({ id: product.id, name: product.name, variant: colour.name, price: colour.price, quantity: line.quantity })));
     try { await placeOrder(); }
     catch (checkoutError) { setError(checkoutError instanceof Error ? checkoutError.message : "Could not start checkout."); }
     finally { setBusy(false); }
@@ -348,7 +351,7 @@ export default function BagFlow() {
             <p>Sign in to continue. Your payment status and orders stay linked to your account.</p>
             <button type="button" className="checkout-demo-button" onClick={signIn}>Sign in to continue</button>
           </div> : <>
-            <p className="account-checkout-note">Order updates go to {account.email}.</p>
+            <p className="account-checkout-note">{updatesGoTo(account.email, customer.phone || account.phone)}</p>
             {draftRestored && selectedAddress === "new" && <p className="draft-restored" role="status">We kept the address you were typing.<button type="button" className="address-link" onClick={() => { clearAddressDraft(); setDraftRestored(false); setCustomer(emptyAddress(account.name, account.phone)); }}>Clear it</button></p>}
             {savedAddresses.length > 0 && <fieldset className="checkout-address-picker">
               <legend>Deliver to</legend>

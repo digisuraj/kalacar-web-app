@@ -1,6 +1,7 @@
 "use client";
 
 import { useLiveLoad } from "@/lib/realtime-client";
+import { trackShopEvent } from "@/components/tracking-tags";
 import Link from "next/link";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
@@ -150,6 +151,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const product = products.find(item => item.id === id);
     const colour = product && colourOf(product, variantId);
     if (!product || !colour) return false;
+    const adding = Math.min(quantity, colour.stock - inCart(lines, id, colour.id, products));
+    if (adding >= 1) trackShopEvent("add_to_cart", [{ id: product.id, name: product.name, variant: colour.name, price: colour.price, quantity: adding }]);
     let added = false;
     setLines(current => {
       const have = inCart(current, id, colour.id, products);

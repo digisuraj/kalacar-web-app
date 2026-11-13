@@ -11,6 +11,7 @@ import { COURIERS, isCourier } from "@/lib/couriers";
 import type { CourierKey } from "@/lib/couriers";
 import { useCart } from "@/components/cart-provider";
 import { useSiteContent } from "@/components/site-content-provider";
+import { SiteFooter } from "@/components/site-footer";
 import { ArrowLeft, BagIcon, CheckMark, External } from "@/components/icons";
 
 type User = { id: string; name: string; email: string; phone: string };
@@ -236,5 +237,6 @@ export default function AccountPanel() {
       </>}
       <a className="account-contact" href={waLink()} target="_blank" rel="noreferrer">Questions about an order? WhatsApp Kalacar · {SUPPORT_WHATSAPP.display}</a>
     </section>
+    <SiteFooter />
   </main>;
 }

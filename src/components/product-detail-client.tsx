@@ -4,7 +4,8 @@ import { ShopLogo } from "@/components/shop-logo";
 import { MobileMenu } from "@/components/mobile-menu";
 import Image from "next/image";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { trackShopEvent } from "@/components/tracking-tags";
 import { requestShopFilter } from "@/lib/shop-filter";
 import { useRouter } from "next/navigation";
 import { AddToBagButton, CartLink, useCart } from "@/components/cart-provider";
@@ -16,6 +17,7 @@ import { ArrowLeft, UserCircle } from "@/components/icons";
 import { BundleBox, CommonFaqs, EndOfPageLink, HowItsMade, LiveViewers, OfferBox, RecentSaleNotice, SoldThisWeek, StickyBuyBar, WhatsappHelp, useSocialProof } from "@/components/product-extras";
 import { ProductReviews, RatingLine } from "@/components/reviews";
 import { useSiteContent } from "@/components/site-content-provider";
+import { SiteFooter } from "@/components/site-footer";
 
 const money = (n: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
 const savePercent = (price: number, regular: number) => regular > price ? Math.round((1 - price / regular) * 100) : 0;
@@ -31,8 +33,16 @@ export default function ProductDetailClient({ slug, initialColour = "" }: { slug
   const [chosenId, setChosenId] = useState(initialColour);
   const [imageIndex, setImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  // One product view per product opened, reported once its details have loaded.
+  const viewed = item?.id ?? "";
+  useEffect(() => {
+    const shown = products.find(product => product.id === viewed);
+    const first = shown?.variants.find(c => c.id === initialColour) ?? shown?.variants[0];
+    if (shown) trackShopEvent("view_item", [{ id: shown.id, name: shown.name, variant: first?.name, price: first?.price ?? shown.price, quantity: 1 }]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- once per product, not on every stock refresh
+  }, [viewed]);
 
-  if (!item) return <main className="product-page"><header className="detail-header"><ShopLogo /></header><section className="cart-content"><h1>{catalogueError || (catalogueLoading ? "Loading product…" : "Product not found in the current catalogue.")}</h1><Link href="/#catalogue"><ArrowLeft /> Back to all murtis</Link></section></main>;
+  if (!item) return <main className="product-page"><header className="detail-header"><ShopLogo /></header><section className="cart-content"><h1>{catalogueError || (catalogueLoading ? "Loading product…" : "Product not found in the current catalogue.")}</h1><Link href="/#catalogue"><ArrowLeft /> Back to all murtis</Link></section><SiteFooter /></main>;
 
   const itemReviews = reviews.filter(review => review.productId === item.id);
   const colours = item.variants;
@@ -129,5 +139,6 @@ export default function ProductDetailClient({ slug, initialColour = "" }: { slug
     <EndOfPageLink />
     {colour && <StickyBuyBar item={item} price={colour.price} watch={buyButtons} disabled={canBuy < 1} inBag={inCart > 0} onAdd={() => { if (canBuy >= 1 && canAdd(item.id, colour.id)) add(item.id, colour.id, qty); openDrawer(); }} onBuy={buyNow} />}
     <RecentSaleNotice proof={proof} products={products} />
+    <SiteFooter />
   </main>;
 }

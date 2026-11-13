@@ -5,9 +5,21 @@ import { useEffect, useRef, useState } from "react";
 import { money } from "@/components/bag-lines";
 import { CheckMark } from "@/components/icons";
 import { useSiteContent } from "@/components/site-content-provider";
-import { DELIVERY_ESTIMATE } from "@/lib/store-info";
+import { DELIVERY_ESTIMATE, updatesGoTo } from "@/lib/store-info";
+import { trackShopEvent } from "@/components/tracking-tags";
 
-type ConfirmedOrder = { id: string; createdAt: string; amount: number; address: string; pincode: string; giftWrap?: boolean; giftWrapPrice?: number; couponCode?: string; discount?: number; items: { name: string; variant?: string; price: number; quantity: number }[] };
+type ConfirmedOrder = { id: string; createdAt: string; amount: number; email?: string; phone?: string; address: string; pincode: string; giftWrap?: boolean; giftWrapPrice?: number; couponCode?: string; discount?: number; items: { id?: string; name: string; variant?: string; price: number; quantity: number }[] };
+
+const TRACKED_KEY = "kalacar.tracked-purchases.v1";
+
+/** Reports each paid order to Meta and Google once, even if this screen is shown again. */
+function trackPurchaseOnce(order: ConfirmedOrder) {
+  let done: string[] = [];
+  try { done = JSON.parse(localStorage.getItem(TRACKED_KEY) ?? "[]") as string[]; } catch { /* treat as none */ }
+  if (done.includes(order.id)) return;
+  trackShopEvent("purchase", order.items.map(item => ({ id: item.id ?? item.name, name: item.name, variant: item.variant, price: item.price, quantity: item.quantity })), { orderId: order.id, value: order.amount });
+  try { localStorage.setItem(TRACKED_KEY, JSON.stringify([...done, order.id].slice(-50))); } catch { /* storage blocked */ }
+}
 
 /** Shown after payment. Details come from the saved order, so they always match what was paid for. */
 export function OrderConfirmation({ orderId, email }: { orderId: string; email?: string }) {
@@ -18,7 +30,10 @@ export function OrderConfirmation({ orderId, email }: { orderId: string; email?:
   useEffect(() => {
     let active = true;
     fetch("/api/account/orders", { cache: "no-store" }).then(r => r.json()).then((data: { orders?: ConfirmedOrder[] }) => {
-      if (active) setOrder(data.orders?.find(item => item.id === orderId) ?? null);
+      const found = data.orders?.find(item => item.id === orderId) ?? null;
+      if (!active) return;
+      setOrder(found);
+      if (found) trackPurchaseOnce(found);
     }).catch(() => undefined);
     return () => { active = false; };
   }, [orderId]);
@@ -26,7 +41,8 @@ export function OrderConfirmation({ orderId, email }: { orderId: string; email?:
     <div className="order-confirmed-head">
       <span className="order-confirmed-mark" aria-hidden="true"><CheckMark size={24} /></span>
       <h1 ref={heading} tabIndex={-1}>Thank you, your order is confirmed</h1>
-      <p>Order <strong>{orderId.slice(0, 8).toUpperCase()}</strong> is paid.{email ? ` Order details are saved to your account, ${email}.` : ""}</p>
+      <p>Order <strong>{orderId.slice(0, 8).toUpperCase()}</strong> is paid.</p>
+      {(order?.email || email) && <p className="order-confirmed-contact">{updatesGoTo(order?.email || email || "", order?.phone ?? "")}</p>}
       {testPayments && <p className="order-confirmed-test">This was a test payment. No real money was taken.</p>}
     </div>
     <div className="order-confirmed-grid">
@@ -46,9 +62,9 @@ export function OrderConfirmation({ orderId, email }: { orderId: string; email?:
       <div className="order-confirmed-card">
         <h2>What happens next</h2>
         <ol className="order-next">
-          <li><b>We prepare and pack it</b><span>Your murti is made to order and packed by us.</span></li>
-          <li><b>We dispatch it</b><span>Tracking details appear on your order once it ships.</span></li>
-          <li><b>It reaches you</b><span>Delivery takes {DELIVERY_ESTIMATE}.</span></li>
+          <li><b>We choose your murti</b><span>We pick out your murti and check it carefully.</span></li>
+          <li><b>We pack and dispatch it</b><span>It is packed safely and handed to the courier. Tracking details appear on your order once it ships.</span></li>
+          <li><b>We ship it to you</b><span>It is delivered to your address in {DELIVERY_ESTIMATE}.</span></li>
         </ol>
       </div>
     </div>
